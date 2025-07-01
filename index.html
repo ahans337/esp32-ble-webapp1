@@ -43,9 +43,9 @@
 
       try {
         const device = await navigator.bluetooth.requestDevice({
-          filters: [{ name: 'ESP32C3_BLE' }],
-          optionalServices: [serviceUUID]
-        });
+  acceptAllDevices: true,
+  optionalServices: [serviceUUID]
+});
 
         const server = await device.gatt.connect();
         const service = await server.getPrimaryService(serviceUUID);
