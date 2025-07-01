@@ -86,6 +86,7 @@
     }
 
 function handleNotification(event) {
+  console.log()
   const value = new TextDecoder('utf-8').decode(event.target.value);
   console.log("🔔 Notification received:", value);  // ← log it
   const number = parseInt(value.trim());
