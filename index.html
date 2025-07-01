@@ -7,10 +7,14 @@
 </head>
 <body>
   <h2>ESP32 BLE Live Data</h2>
-  <button onclick="connect()">Connect to ESP32 BLE</button>
+  <button onclick="connectToESP32()">Connect to ESP32 BLE</button>
+  <button onclick="scanServices()">Scan Services</button>
   <canvas id="chart" width="600" height="300"></canvas>
 
   <script>
+    const serviceUUID = '12345678-1234-1234-1234-1234567890ab';
+    const charUUID    = 'abcd1234-5678-1234-5678-abcdef123456';
+
     let chart, data = [], labels = [];
 
     // Initialize Chart
@@ -37,27 +41,49 @@
       });
     };
 
-    async function connect() {
-  try {
-    const device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: ['battery_service', 'device_information', serviceUUID]
-    });
+    // Connect and start plotting
+    async function connectToESP32() {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [serviceUUID]
+        });
 
-    const server = await device.gatt.connect();
-    const services = await server.getPrimaryServices();
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(serviceUUID);
+        const characteristic = await service.getCharacteristic(charUUID);
 
-    for (const service of services) {
-      console.log('🔎 Found service:', service.uuid);
-      const characteristics = await service.getCharacteristics();
-      for (const characteristic of characteristics) {
-        console.log('  ↳ Characteristic:', characteristic.uuid);
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', handleNotification);
+
+        console.log("✅ Connected and listening for notifications...");
+      } catch (error) {
+        console.error('Bluetooth connection failed:', error);
       }
     }
-  } catch (error) {
-    console.error('Bluetooth connection failed:', error);
-  }
-}
+
+    // Just scan and log available services/characteristics
+    async function scanServices() {
+      try {
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [serviceUUID]
+        });
+
+        const server = await device.gatt.connect();
+        const services = await server.getPrimaryServices();
+
+        for (const service of services) {
+          console.log('🔎 Found service:', service.uuid);
+          const characteristics = await service.getCharacteristics();
+          for (const characteristic of characteristics) {
+            console.log('  ↳ Characteristic:', characteristic.uuid);
+          }
+        }
+      } catch (error) {
+        console.error('Service scan failed:', error);
+      }
+    }
 
     function handleNotification(event) {
       const value = new TextDecoder().decode(event.target.value);
@@ -72,6 +98,8 @@
           labels.shift();
         }
         chart.update();
+      } else {
+        console.warn('Received non-numeric BLE data:', value);
       }
     }
   </script>
