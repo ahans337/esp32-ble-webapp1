@@ -38,6 +38,28 @@
     };
 
     async function connect() {
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ['battery_service', 'device_information', serviceUUID]
+    });
+
+    const server = await device.gatt.connect();
+    const services = await server.getPrimaryServices();
+
+    for (const service of services) {
+      console.log('🔎 Found service:', service.uuid);
+      const characteristics = await service.getCharacteristics();
+      for (const characteristic of characteristics) {
+        console.log('  ↳ Characteristic:', characteristic.uuid);
+      }
+    }
+  } catch (error) {
+    console.error('Bluetooth connection failed:', error);
+  }
+}
+    
+    async function connect() {
         const serviceUUID = '12345678-1234-1234-1234-1234567890ab';
         const charUUID    = 'abcd1234-5678-1234-5678-abcdef123456';
 
