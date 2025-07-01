@@ -85,23 +85,26 @@
       }
     }
 
-    function handleNotification(event) {
-      const value = new TextDecoder().decode(event.target.value);
-      const number = parseInt(value.trim());
+function handleNotification(event) {
+  const value = new TextDecoder().decode(event.target.value);
+  console.log("🔔 Notification received:", value);  // ← log it
+  const number = parseInt(value.trim());
 
-      if (!isNaN(number)) {
-        const now = new Date().toLocaleTimeString();
-        data.push(number);
-        labels.push(now);
-        if (data.length > 20) {
-          data.shift();
-          labels.shift();
-        }
-        chart.update();
-      } else {
-        console.warn('Received non-numeric BLE data:', value);
-      }
+  if (!isNaN(number)) {
+    const now = new Date().toLocaleTimeString();
+    data.push(number);
+    labels.push(now);
+    if (data.length > 20) {
+      data.shift();
+      labels.shift();
     }
+    chart.update();
+  } else {
+    console.warn("⚠️ Non-numeric BLE value:", value);
+  }
+}
+
+    
   </script>
 </body>
 </html>
