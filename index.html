@@ -15,7 +15,10 @@
     const serviceUUID = 'e2164c18-4049-483d-8c74-8a7d382f2834';
     const charUUID    = 'd34db33f-dead-beef-cafe-babec0010001';
 
-    let chart, data = [], labels = [];
+    let chart;
+    const data = [];
+    const labels = [];
+    const fullData = [];
 
     // Initialize Chart
     window.onload = () => {
@@ -25,7 +28,7 @@
         data: {
           labels: labels,
           datasets: [{
-            label: 'BLE Data',
+            label: 'Total Force (N)',
             borderColor: 'blue',
             data: data,
             fill: false
@@ -34,8 +37,20 @@
         options: {
           animation: false,
           scales: {
-            x: { display: true },
-            y: { beginAtZero: true }
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: 'Time (s)'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Total Force (N)'
+              }
+            }
           }
         }
       });
@@ -62,7 +77,7 @@
       }
     }
 
-    // Just scan and log available services/characteristics
+    // Scan available services and characteristics
     async function scanServices() {
       try {
         const device = await navigator.bluetooth.requestDevice({
@@ -85,27 +100,37 @@
       }
     }
 
-function handleNotification(event) {
-  console.log()
-  const value = new TextDecoder('utf-8').decode(event.target.value);
-  console.log("🔔 Notification received:", value);  // ← log it
-  const number = parseInt(value.trim());
+    // Handle BLE notifications
+    function handleNotification(event) {
+      const value = new TextDecoder('utf-8').decode(event.target.value);
+      console.log("🔔 Notification received:", value.trim());
 
-  if (!isNaN(number)) {
-    const now = new Date().toLocaleTimeString();
-    data.push(number);
-    labels.push(now);
-    if (data.length > 20) {
-      data.shift();
-      labels.shift();
+      const parts = value.trim().split(",");
+      if (parts.length < 2) {
+        console.warn("⚠️ Invalid BLE data format:", value);
+        return;
+      }
+
+      const timeMs = parseInt(parts[0]);
+      const totalForce = parseFloat(parts[1]);
+
+      if (!isNaN(timeMs) && !isNaN(totalForce)) {
+        const timeSec = (timeMs / 1000).toFixed(2);
+        fullData.push({ time: timeSec, load: totalForce });
+
+        data.push(totalForce);
+        labels.push(timeSec + "s");
+
+        if (data.length > 50) {
+          data.shift();
+          labels.shift();
+        }
+
+        chart.update();
+      } else {
+        console.warn("⚠️ Could not parse number from BLE data:", parts);
+      }
     }
-    chart.update();
-  } else {
-    console.warn("⚠️ Non-numeric BLE value:", value);
-  }
-}
-
-    
   </script>
 </body>
 </html>
