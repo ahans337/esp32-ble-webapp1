@@ -101,36 +101,37 @@
     }
 
     // Handle BLE notifications
-    function handleNotification(event) {
-      const value = new TextDecoder('utf-8').decode(event.target.value);
-      console.log("🔔 Notification received:", value.trim());
+function handleNotification(event) {
+  const value = new TextDecoder('utf-8').decode(event.target.value);
+  console.log("🔔 Notification received:", value.trim());
 
-      const parts = value.trim().split(",");
-      if (parts.length < 2) {
-        console.warn("⚠️ Invalid BLE data format:", value);
-        return;
-      }
+  const parts = value.trim().split(",");
+  if (parts.length < 2) {
+    console.warn("⚠️ Invalid BLE data format:", value);
+    return;
+  }
 
-      const timeMs = parseInt(parts[0]);
-      const totalForce = parseFloat(parts[1]);
+  const timeMs = parseInt(parts[0]);           // from ESP millis()
+  const totalForce = parseFloat(parts[1]);     // from ESP calculation
 
-      if (!isNaN(timeMs) && !isNaN(totalForce)) {
-        const timeSec = (timeMs / 1000).toFixed(2);
-        fullData.push({ time: timeSec, load: totalForce });
+  if (!isNaN(timeMs) && !isNaN(totalForce)) {
+    const timeSec = (timeMs / 1000).toFixed(2);  // Convert to seconds
 
-        data.push(totalForce);
-        labels.push(timeSec + "s");
+    fullData.push({ time: timeSec, load: totalForce });
 
-        if (data.length > 50) {
-          data.shift();
-          labels.shift();
-        }
+    labels.push(timeSec + "s");   // X-axis = ESP time
+    data.push(totalForce);       // Y-axis = force
 
-        chart.update();
-      } else {
-        console.warn("⚠️ Could not parse number from BLE data:", parts);
-      }
+    if (data.length > 50) {
+      data.shift();
+      labels.shift();
     }
+
+    chart.update();
+  } else {
+    console.warn("⚠️ Could not parse number from BLE data:", parts);
+  }
+}
   </script>
 </body>
 </html>
