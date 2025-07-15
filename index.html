@@ -2,30 +2,28 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>ESP32 BLE Graph</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js">
-    let charCOM = null;
-  </script>
+  <title>ESP32 BLE Graph + Input</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <h2>ESP32 BLE Live Data</h2>
   <button onclick="connectToESP32()">Connect to ESP32 BLE</button>
   <button onclick="scanServices()">Scan Services</button>
-  <canvas id="chart" width="600" height="300"></canvas>
-
-  <input type="text" id="inputBox" placeholder="Enter mass (lbs)"> <!-- This is the weight entry box -->
+  <br><br>
+  <input type="text" id="inputBox" placeholder="Enter mass (lbs)">
   <button onclick="sendToESP32()">Send to ESP32</button>
+  <br><br>
+  <canvas id="chart" width="600" height="300"></canvas>
 
   <script>
     const serviceUUID = 'e2164c18-4049-483d-8c74-8a7d382f2834';
     const charUUID    = 'd34db33f-dead-beef-cafe-babec0010001';
+    const comUUID     = 'b21d2927-093b-4c5b-9b6a-0555cde8cee5';
 
     let chart;
-    const data = [];
-    const labels = [];
-    const fullData = [];
+    const data = [], labels = [], fullData = [];
+    let charCOM = null;
 
-    // Initialize Chart
     window.onload = () => {
       const ctx = document.getElementById('chart').getContext('2d');
       chart = new Chart(ctx, {
@@ -42,26 +40,13 @@
         options: {
           animation: false,
           scales: {
-            x: {
-              display: true,
-              title: {
-                display: true,
-                text: 'Time (s)'
-              }
-            },
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Total Force (N)'
-              }
-            }
+            x: { display: true, title: { display: true, text: "Time (s)" } },
+            y: { beginAtZero: true, title: { display: true, text: "Total Force (N)" } }
           }
         }
       });
     };
 
-    // Connect and start plotting
     async function connectToESP32() {
       try {
         const device = await navigator.bluetooth.requestDevice({
@@ -71,40 +56,21 @@
 
         const server = await device.gatt.connect();
         const service = await server.getPrimaryService(serviceUUID);
-        const characteristic = await service.getCharacteristic(charUUID);
 
+        // LIVE characteristic
+        const characteristic = await service.getCharacteristic(charUUID);
         await characteristic.startNotifications();
         characteristic.addEventListener('characteristicvaluechanged', handleNotification);
 
-        charCOM = await service.getCharacteristic("b21d2927-093b-4c5b-9b6a-0555cde8cee5");
-        console.log("✅ COM Characteristic ready:", charCOM.uuid);
+        // COM characteristic
+        charCOM = await service.getCharacteristic(comUUID);
+        console.log("✅ COM characteristic ready");
 
-        console.log("✅ Connected and listening for notifications...");
       } catch (error) {
-        console.error('Bluetooth connection failed:', error);
+        console.error("❌ BLE connection error:", error);
       }
     }
-async function sendToESP32() {
-  const input = document.getElementById("inputBox").value;
-  if (!charCOM) {
-    alert("❌ Not connected to ESP32 or COM characteristic not found.");
-    return;
-  }
 
-  if (input.trim() === "") {
-    alert("⚠️ Input cannot be empty.");
-    return;
-  }
-
-  try {
-    const encoder = new TextEncoder();
-    await charCOM.writeValue(encoder.encode(input.trim()));
-    console.log("📤 Sent to ESP32:", input.trim());
-  } catch (error) {
-    console.error("❌ Failed to write to ESP32:", error);
-  }
-}
-    // Scan available services and characteristics
     async function scanServices() {
       try {
         const device = await navigator.bluetooth.requestDevice({
@@ -123,42 +89,55 @@ async function sendToESP32() {
           }
         }
       } catch (error) {
-        console.error('Service scan failed:', error);
+        console.error("❌ Scan failed:", error);
       }
     }
 
-    // Handle BLE notifications
-function handleNotification(event) {
-  const value = new TextDecoder('utf-8').decode(event.target.value);
-  console.log("🔔 Notification received:", value.trim());
+    async function sendToESP32() {
+      const input = document.getElementById("inputBox").value;
+      if (!charCOM) {
+        alert("❌ Not connected to COM characteristic.");
+        return;
+      }
 
-  const parts = value.trim().split(",");
-  if (parts.length < 2) {
-    console.warn("⚠️ Invalid BLE data format:", value);
-    return;
-  }
+      if (input.trim() === "") {
+        alert("⚠️ Input is empty.");
+        return;
+      }
 
-  const timeMs = parseInt(parts[0]);           // from ESP millis()
-  const totalForce = parseFloat(parts[1]);     // from ESP calculation
-
-  if (!isNaN(timeMs) && !isNaN(totalForce)) {
-    const timeSec = (timeMs / 1000).toFixed(2);  // Convert to seconds
-
-    fullData.push({ time: timeSec, load: totalForce });
-
-    labels.push(timeSec + "s");   // X-axis = ESP time
-    data.push(totalForce);       // Y-axis = force
-
-    if (data.length > 50) {
-      data.shift();
-      labels.shift();
+      try {
+        const encoder = new TextEncoder();
+        await charCOM.writeValue(encoder.encode(input.trim()));
+        console.log("📤 Sent to ESP32:", input.trim());
+      } catch (error) {
+        console.error("❌ Write failed:", error);
+      }
     }
 
-    chart.update();
-  } else {
-    console.warn("⚠️ Could not parse number from BLE data:", parts);
-  }
-}
+    function handleNotification(event) {
+      const value = new TextDecoder('utf-8').decode(event.target.value);
+      console.log("🔔 Notification received:", value.trim());
+
+      const parts = value.trim().split(",");
+      if (parts.length < 2) return;
+
+      const timeMs = parseInt(parts[0]);
+      const totalForce = parseFloat(parts[1]);
+
+      if (!isNaN(timeMs) && !isNaN(totalForce)) {
+        const timeSec = (timeMs / 1000).toFixed(2);
+        fullData.push({ time: timeSec, load: totalForce });
+        data.push(totalForce);
+        labels.push(timeSec + "s");
+
+        if (data.length > 50) {
+          data.shift();
+          labels.shift();
+        }
+
+        chart.update();
+      }
+    }
   </script>
 </body>
 </html>
