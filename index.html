@@ -3,13 +3,18 @@
 <head>
   <meta charset="utf-8">
   <title>ESP32 BLE Graph</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js">
+    let charCOM = null;
+  </script>
 </head>
 <body>
   <h2>ESP32 BLE Live Data</h2>
   <button onclick="connectToESP32()">Connect to ESP32 BLE</button>
   <button onclick="scanServices()">Scan Services</button>
   <canvas id="chart" width="600" height="300"></canvas>
+
+  <input type="text" id="inputBox" placeholder="Enter mass (lbs)"> <!-- This is the weight entry box -->
+  <button onclick="sendToESP32()">Send to ESP32</button>
 
   <script>
     const serviceUUID = 'e2164c18-4049-483d-8c74-8a7d382f2834';
@@ -71,12 +76,34 @@
         await characteristic.startNotifications();
         characteristic.addEventListener('characteristicvaluechanged', handleNotification);
 
+        charCOM = await service.getCharacteristic("b21d2927-093b-4c5b-9b6a-0555cde8cee5");
+        console.log("✅ COM Characteristic ready:", charCOM.uuid);
+
         console.log("✅ Connected and listening for notifications...");
       } catch (error) {
         console.error('Bluetooth connection failed:', error);
       }
     }
+async function sendToESP32() {
+  const input = document.getElementById("inputBox").value;
+  if (!charCOM) {
+    alert("❌ Not connected to ESP32 or COM characteristic not found.");
+    return;
+  }
 
+  if (input.trim() === "") {
+    alert("⚠️ Input cannot be empty.");
+    return;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    await charCOM.writeValue(encoder.encode(input.trim()));
+    console.log("📤 Sent to ESP32:", input.trim());
+  } catch (error) {
+    console.error("❌ Failed to write to ESP32:", error);
+  }
+}
     // Scan available services and characteristics
     async function scanServices() {
       try {
