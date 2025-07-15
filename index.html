@@ -7,6 +7,7 @@
 </head>
 <body>
   <h2>ESP32 BLE Live Data</h2>
+  <div id="sessionInfo"></div>
   <button onclick="connectToESP32()">Connect to ESP32 BLE</button>
   <button onclick="scanServices()">Scan Services</button>
   <br><br>
@@ -25,6 +26,10 @@
     let chart;
     const data = [], labels = [], fullData = [];
     let charCOM = null;
+
+    let sessionStartTime = null;
+    let sessionEndTime = null;
+    let sessionActive = false;
 
     window.onload = () => {
       const ctx = document.getElementById('chart').getContext('2d');
@@ -124,7 +129,6 @@ async function toggleDataStream() {
   }
 
   const command = dataStreaming ? "CMD_STOP" : "CMD_START";
-  await charCOM.writeValue(new TextEncoder().encode(command));
 
   try {
     const encoder = new TextEncoder();
@@ -134,11 +138,32 @@ async function toggleDataStream() {
     const btn = document.getElementById("toggleButton");
     btn.textContent = dataStreaming ? "Stop" : "Start";
 
-    console.log(`📤 Sent ${command} to ESP32`);
+    if (dataStreaming) {
+      sessionStartTime = new Date();
+      sessionActive = true;
+      fullData.length = 0;  // optional: clear previous data
+      console.log("▶️ Session started at", sessionStartTime.toLocaleTimeString());
+    } else {
+      
+      sessionEndTime = new Date();
+      sessionActive = false;
+      console.log("⏹️ Session ended at", sessionEndTime.toLocaleTimeString());
+
+      const durationSec = ((sessionEndTime - sessionStartTime) / 1000).toFixed(2);
+      console.log(`⏱️ Total session duration: ${durationSec} seconds`);
+
+      // Optional: show alert or log
+      alert(`Session lasted ${durationSec} seconds with ${fullData.length} samples.`);
+
+      document.getElementById("sessionInfo").textContent =
+      `Session Duration: ${durationSec}s, Data Points: ${fullData.length}`;
+    }
+
   } catch (error) {
     console.error("❌ Failed to send start/stop:", error);
   }
 }
+
    function handleNotification(event) {
   const value = new TextDecoder('utf-8').decode(event.target.value).trim();
   console.log("🔔 Notification received:", value);
