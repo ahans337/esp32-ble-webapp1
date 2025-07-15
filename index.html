@@ -30,6 +30,7 @@
     let sessionStartTime = null;
     let sessionEndTime = null;
     let sessionActive = false;
+    let bleStartTimestamp = null;
 
     window.onload = () => {
       const ctx = document.getElementById('chart').getContext('2d');
@@ -139,11 +140,17 @@ async function toggleDataStream() {
     btn.textContent = dataStreaming ? "Stop" : "Start";
 
     if (dataStreaming) {
-      sessionStartTime = new Date();
-      sessionActive = true;
-      fullData.length = 0;  // optional: clear previous data
-      console.log("▶️ Session started at", sessionStartTime.toLocaleTimeString());
-    } else {
+  sessionStartTime = new Date();
+  sessionActive = true;
+  fullData.length = 0;
+  data.length = 0;
+  labels.length = 0;
+  chart.update();
+
+  bleStartTimestamp = null; // Will be set by the first BLE data point
+
+  console.log("▶️ Session started at", sessionStartTime.toLocaleTimeString());
+} else {
       
       sessionEndTime = new Date();
       sessionActive = false;
@@ -164,36 +171,34 @@ async function toggleDataStream() {
   }
 }
 
-   function handleNotification(event) {
-  const value = new TextDecoder('utf-8').decode(event.target.value).trim();
-  console.log("🔔 Notification received:", value);
+function handleNotification(event) {
+  if (!sessionActive) return;  // 🚫 Ignore data if not started
 
-  // Skip non-numeric or non-live data
-  if (value.startsWith("PEAK") || isNaN(value.split(",")[0])) {
-    console.log("⏩ Skipped non-live data");
-    return;
-  }
-
-  const parts = value.split(",");
+  const value = new TextDecoder('utf-8').decode(event.target.value);
+  const parts = value.trim().split(",");
   if (parts.length < 2) return;
 
   const timeMs = parseInt(parts[0]);
   const totalForce = parseFloat(parts[1]);
+  if (isNaN(timeMs) || isNaN(totalForce)) return;
 
-  if (!isNaN(timeMs) && !isNaN(totalForce)) {
-    const timeSec = (timeMs / 1000).toFixed(2);
-    fullData.push({ time: timeSec, load: totalForce });
-    data.push(totalForce);
-    labels.push(timeSec + "s");
+  // Set reference time only on the first valid BLE packet
+  if (bleStartTimestamp === null) bleStartTimestamp = timeMs;
 
-    if (data.length > 50) {
-      data.shift();
-      labels.shift();
-    }
+  const timeSec = ((timeMs - bleStartTimestamp) / 1000).toFixed(2);
 
-    chart.update();
+  fullData.push({ time: timeSec, load: totalForce });
+  data.push(totalForce);
+  labels.push(timeSec + "s");
+
+  if (data.length > 50) {
+    data.shift();
+    labels.shift();
   }
+
+  chart.update();
 }
+
   </script>
 </body>
 </html>
