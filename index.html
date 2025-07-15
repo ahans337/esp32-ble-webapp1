@@ -123,7 +123,7 @@ async function toggleDataStream() {
     return;
   }
 
-  const command = dataStreaming ? "STOP" : "START";
+  const command = dataStreaming ? "CMD_STOP" : "CMD_START";
 
   try {
     const encoder = new TextEncoder();
