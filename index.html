@@ -11,8 +11,9 @@
   <button onclick="scanServices()">Scan Services</button>
   <br><br>
   <input type="text" id="inputBox" placeholder="Enter mass (lbs)">
-  <button onclick="sendToESP32()">Send to ESP32</button>
-  <button id="toggleButton" onclick="toggleDataStream()">Start</button>
+<button onclick="sendToESP32()">Send to ESP32</button>
+<br><br>
+<button id="toggleButton" onclick="toggleDataStream()">Start</button>
   <br><br>
   <canvas id="chart" width="600" height="300"></canvas>
 
@@ -137,30 +138,36 @@ async function toggleDataStream() {
     console.error("❌ Failed to send start/stop:", error);
   }
 }
-    function handleNotification(event) {
-      const value = new TextDecoder('utf-8').decode(event.target.value);
-      console.log("🔔 Notification received:", value.trim());
+   function handleNotification(event) {
+  const value = new TextDecoder('utf-8').decode(event.target.value).trim();
+  console.log("🔔 Notification received:", value);
 
-      const parts = value.trim().split(",");
-      if (parts.length < 2) return;
+  // Skip non-numeric or non-live data
+  if (value.startsWith("PEAK") || isNaN(value.split(",")[0])) {
+    console.log("⏩ Skipped non-live data");
+    return;
+  }
 
-      const timeMs = parseInt(parts[0]);
-      const totalForce = parseFloat(parts[1]);
+  const parts = value.split(",");
+  if (parts.length < 2) return;
 
-      if (!isNaN(timeMs) && !isNaN(totalForce)) {
-        const timeSec = (timeMs / 1000).toFixed(2);
-        fullData.push({ time: timeSec, load: totalForce });
-        data.push(totalForce);
-        labels.push(timeSec + "s");
+  const timeMs = parseInt(parts[0]);
+  const totalForce = parseFloat(parts[1]);
 
-        if (data.length > 50) {
-          data.shift();
-          labels.shift();
-        }
+  if (!isNaN(timeMs) && !isNaN(totalForce)) {
+    const timeSec = (timeMs / 1000).toFixed(2);
+    fullData.push({ time: timeSec, load: totalForce });
+    data.push(totalForce);
+    labels.push(timeSec + "s");
 
-        chart.update();
-      }
+    if (data.length > 50) {
+      data.shift();
+      labels.shift();
     }
+
+    chart.update();
+  }
+}
   </script>
 </body>
 </html>
