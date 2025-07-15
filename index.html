@@ -109,7 +109,7 @@
 
       try {
         const encoder = new TextEncoder();
-        await charCOM.writeValue(encoder.encode(input.trim()));
+        await charCOM.writeValue(new TextEncoder().encode("MASS_" + input.trim()));
         console.log("📤 Sent to ESP32:", input.trim());
       } catch (error) {
         console.error("❌ Write failed:", error);
@@ -124,6 +124,7 @@ async function toggleDataStream() {
   }
 
   const command = dataStreaming ? "CMD_STOP" : "CMD_START";
+  await charCOM.writeValue(new TextEncoder().encode(command));
 
   try {
     const encoder = new TextEncoder();
