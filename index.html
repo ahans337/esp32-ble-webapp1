@@ -12,6 +12,7 @@
   <br><br>
   <input type="text" id="inputBox" placeholder="Enter mass (lbs)">
   <button onclick="sendToESP32()">Send to ESP32</button>
+  <button id="toggleButton" onclick="toggleDataStream()">Start</button>
   <br><br>
   <canvas id="chart" width="600" height="300"></canvas>
 
@@ -113,7 +114,29 @@
         console.error("❌ Write failed:", error);
       }
     }
+let dataStreaming = false;
 
+async function toggleDataStream() {
+  if (!charCOM) {
+    alert("❌ Not connected to ESP32.");
+    return;
+  }
+
+  const command = dataStreaming ? "STOP" : "START";
+
+  try {
+    const encoder = new TextEncoder();
+    await charCOM.writeValue(encoder.encode(command));
+    dataStreaming = !dataStreaming;
+
+    const btn = document.getElementById("toggleButton");
+    btn.textContent = dataStreaming ? "Stop" : "Start";
+
+    console.log(`📤 Sent ${command} to ESP32`);
+  } catch (error) {
+    console.error("❌ Failed to send start/stop:", error);
+  }
+}
     function handleNotification(event) {
       const value = new TextDecoder('utf-8').decode(event.target.value);
       console.log("🔔 Notification received:", value.trim());
