@@ -176,51 +176,9 @@ async function toggleDataStream() {
       document.getElementById("sessionInfo").textContent =
         `Session Duration: ${durationSec}s, Data Points: ${fullData.length}`;
 
-      // Clear peak/cycle data
       document.getElementById("cycleCount").textContent = `Cycles: 0`;
       document.getElementById("peakForce").textContent = `Peak Force: -- N`;
       document.getElementById("asymRatio").textContent = `Asymmetry Ratio: --`;
-    }
-
-  } catch (error) {
-    console.error("❌ Failed to send start/stop:", error);
-  }
-}
-  
-
-  try {
-    const encoder = new TextEncoder();
-    await charCOM.writeValue(encoder.encode(command));
-    dataStreaming = !dataStreaming;
-
-    const btn = document.getElementById("toggleButton");
-    btn.textContent = dataStreaming ? "Stop" : "Start";
-
-    if (dataStreaming) {
-  sessionStartTime = new Date();
-  sessionActive = true;
-  fullData.length = 0;
-  data.length = 0;
-  labels.length = 0;
-  chart.update();
-
-  bleStartTimestamp = null; // Will be set by the first BLE data point
-
-  console.log("▶️ Session started at", sessionStartTime.toLocaleTimeString());
-} else {
-      
-      sessionEndTime = new Date();
-      sessionActive = false;
-      console.log("⏹️ Session ended at", sessionEndTime.toLocaleTimeString());
-
-      const durationSec = ((sessionEndTime - sessionStartTime) / 1000).toFixed(2);
-      console.log(`⏱️ Total session duration: ${durationSec} seconds`);
-
-      // Optional: show alert or log
-      alert(`Session lasted ${durationSec} seconds with ${fullData.length} samples.`);
-
-      document.getElementById("sessionInfo").textContent =
-      `Session Duration: ${durationSec}s, Data Points: ${fullData.length}`;
     }
 
   } catch (error) {
