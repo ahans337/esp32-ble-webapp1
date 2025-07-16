@@ -154,10 +154,29 @@ async function toggleDataStream() {
     const btn = document.getElementById("toggleButton");
     btn.textContent = dataStreaming ? "Stop" : "Start";
 
-    console.log(`📤 Sent ${command} to ESP32`);
+    if (dataStreaming) {
+      sessionStartTime = new Date();
+      sessionActive = true;
+      fullData.length = 0;
+      data.length = 0;
+      labels.length = 0;
+      chart.update();
+      bleStartTimestamp = null;
 
-    // Reset peak/cycle data on STOP
-    if (!dataStreaming) {
+      console.log("▶️ Session started at", sessionStartTime.toLocaleTimeString());
+    } else {
+      sessionEndTime = new Date();
+      sessionActive = false;
+
+      const durationSec = ((sessionEndTime - sessionStartTime) / 1000).toFixed(2);
+      console.log(`⏱️ Total session duration: ${durationSec} seconds`);
+
+      alert(`Session lasted ${durationSec} seconds with ${fullData.length} samples.`);
+
+      document.getElementById("sessionInfo").textContent =
+        `Session Duration: ${durationSec}s, Data Points: ${fullData.length}`;
+
+      // Clear peak/cycle data
       document.getElementById("cycleCount").textContent = `Cycles: 0`;
       document.getElementById("peakForce").textContent = `Peak Force: -- N`;
       document.getElementById("asymRatio").textContent = `Asymmetry Ratio: --`;
@@ -168,8 +187,6 @@ async function toggleDataStream() {
   }
 }
   
-
-  const command = dataStreaming ? "CMD_STOP" : "CMD_START";
 
   try {
     const encoder = new TextEncoder();
