@@ -17,15 +17,26 @@
 <button id="toggleButton" onclick="toggleDataStream()">Start</button>
   <br><br>
   <canvas id="chart" width="600" height="300"></canvas>
+  
+  <!-- Peak Data display --> 
+  <div id="peakInfo">
+  <h3>Cycle Info</h3>
+  <p id="cycleCount">Cycles: 0</p>
+  <p id="peakForce">Peak Force: -- N</p>
+  <p id="asymRatio">Asymmetry Ratio: --</p>
+  </div>
+
 
   <script>
     const serviceUUID = 'e2164c18-4049-483d-8c74-8a7d382f2834';
     const charUUID    = 'd34db33f-dead-beef-cafe-babec0010001';
     const comUUID     = 'b21d2927-093b-4c5b-9b6a-0555cde8cee5';
+    const peakUUID = "d34db33f-dead-beef-cafe-babec0010002";
 
     let chart;
     const data = [], labels = [], fullData = [];
     let charCOM = null;
+    let charPEAK = null;
 
     let sessionStartTime = null;
     let sessionEndTime = null;
@@ -56,28 +67,32 @@
     };
 
     async function connectToESP32() {
-      try {
-        const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: [serviceUUID]
-        });
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [serviceUUID]
+    });
 
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(serviceUUID);
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(serviceUUID);
 
-        // LIVE characteristic
-        const characteristic = await service.getCharacteristic(charUUID);
-        await characteristic.startNotifications();
-        characteristic.addEventListener('characteristicvaluechanged', handleNotification);
+    // LIVE
+    const characteristic = await service.getCharacteristic(charUUID);
+    await characteristic.startNotifications();
+    characteristic.addEventListener('characteristicvaluechanged', handleNotification);
 
-        // COM characteristic
-        charCOM = await service.getCharacteristic(comUUID);
-        console.log("✅ COM characteristic ready");
+    // PEAK
+    charPEAK = await service.getCharacteristic(peakUUID);
+    await charPEAK.startNotifications();
+    charPEAK.addEventListener('characteristicvaluechanged', handlePeakData);
 
-      } catch (error) {
-        console.error("❌ BLE connection error:", error);
-      }
-    }
+    // COM
+    charCOM = await service.getCharacteristic(comUUID);
+    console.log("✅ All characteristics ready");
+  } catch (error) {
+    console.error("❌ BLE connection error:", error);
+  }
+}
 
     async function scanServices() {
       try {
@@ -128,6 +143,31 @@ async function toggleDataStream() {
     alert("❌ Not connected to ESP32.");
     return;
   }
+
+  const command = dataStreaming ? "CMD_STOP" : "CMD_START";
+
+  try {
+    const encoder = new TextEncoder();
+    await charCOM.writeValue(encoder.encode(command));
+    dataStreaming = !dataStreaming;
+
+    const btn = document.getElementById("toggleButton");
+    btn.textContent = dataStreaming ? "Stop" : "Start";
+
+    console.log(`📤 Sent ${command} to ESP32`);
+
+    // Reset peak/cycle data on STOP
+    if (!dataStreaming) {
+      document.getElementById("cycleCount").textContent = `Cycles: 0`;
+      document.getElementById("peakForce").textContent = `Peak Force: -- N`;
+      document.getElementById("asymRatio").textContent = `Asymmetry Ratio: --`;
+    }
+
+  } catch (error) {
+    console.error("❌ Failed to send start/stop:", error);
+  }
+}
+  
 
   const command = dataStreaming ? "CMD_STOP" : "CMD_START";
 
@@ -197,6 +237,22 @@ function handleNotification(event) {
   }
 
   chart.update();
+}
+
+function handlePeakData(event) {
+  const value = new TextDecoder('utf-8').decode(event.target.value);
+  console.log("📊 Peak data:", value);
+
+  if (!value.startsWith("PEAK")) return;
+
+  const parts = value.trim().split(",");
+  if (parts.length !== 8) return;
+
+  const [_, count, pos, neg, ecc, con, asym, peak] = parts;
+
+  document.getElementById("cycleCount").textContent = `Cycles: ${count}`;
+  document.getElementById("peakForce").textContent = `Peak Force: ${parseFloat(peak).toFixed(2)} N`;
+  document.getElementById("asymRatio").textContent = `Asymmetry Ratio: ${parseFloat(asym).toFixed(2)}`;
 }
 
   </script>
