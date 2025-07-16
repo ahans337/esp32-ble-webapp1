@@ -178,7 +178,8 @@ async function toggleDataStream() {
 
       document.getElementById("cycleCount").textContent = `Cycles: 0`;
       document.getElementById("peakForce").textContent = `Peak Force: -- N`;
-      document.getElementById("asymRatio").textContent = `Asymmetry Ratio: --`;
+      // document.getElementById("asymRatio").textContent = `Asymmetry Ratio: --`;
+      exportCSV();
     }
 
   } catch (error) {
@@ -229,7 +230,29 @@ function handlePeakData(event) {
   document.getElementById("peakForce").textContent = `Peak Force: ${parseFloat(peak).toFixed(2)} N`;
   document.getElementById("asymRatio").textContent = `Asymmetry Ratio: ${parseFloat(asym).toFixed(2)}`;
 }
+function exportCSV() {
+  if (fullData.length === 0) {
+    alert("No data to export.");
+    return;
+  }
 
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "Time (s),Total Force (N)\n";
+
+  fullData.forEach(row => {
+    csvContent += `${row.time},${row.load}\n`;
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  link.setAttribute("download", `squat_data_${timestamp}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
   </script>
 </body>
 </html>
